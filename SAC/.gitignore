@@ -1,0 +1,17 @@
+/SAC/nbproject/
+/SAC/build/
+/SACMENU/nbproject/private/
+/SAC/dist/
+*.properties
+*.properties
+SAC/nbproject/project.xml
+*.properties
+*.properties
+SAC/nbproject/project.properties
+SAC/nbproject/build-impl.xml
+SAC/nbproject/project.xml
+SAC/web/bower_components/
+SAC/nbproject/build-impl.xml
+SAC/nbproject/project.properties
+SAC/nbproject/build-impl.xml
+*.properties

@@ -1,0 +1,98 @@
+#Procedure para vaciar toda la base
+call sp_CrearBase();
+#call sp_DropDatabase();
+#Procedure para vaciar toda la base
+call sp_DropDatabase();
+
+#Ahora registramos a un paciente:
+call sp_AltaUsuario('paciente10', 4, 'CurpPaciente10', 'castilloreyesjuan@gmail.com', 'Juan', 'Castillo', 'Reyes', current_date, '1', 'A+', '', '', '', '');
+
+#Registramos 1 super-admi:
+call sp_AltaUsuario('admi2', 0, 'CurpAdmi2', 'admi2@yahoo.com', 'Admi', 'Nistrador', 'DOS', current_date, 0, 'A+', 'Universidad', 'Ninguna', 'IPN', 'Cedula Admi 1');
+
+#Registramos 1 secretaria:
+call sp_AltaUsuario('secre1', 1, 'CurpSecre1', 'secre1@yahoo.com', 'Secre', 'Taria', 'Uno', current_date, 0, 'A+', 'Universidad', 'Ninguna', 'IPN', 'Cedula Secre 1');
+
+#Registramos Registramos un doctor.:
+call sp_AltaUsuario('doctor1', 2, 'CurpDoc1', 'doctor1@yahoo.com', 'Doc', 'tor', 'Uno', current_date, 0, 'A+', 'Universidad', 'Ninguna', 'IPN', 'Cedula Doc 1');
+
+#Registramos 1 enfermera:
+call sp_AltaUsuario('enfe1', 3, 'CurpEnfe1', 'enfe1@yahoo.com', 'Enfer', 'Mera', 'Uno', current_date, 0, 'A+', 'Universidad', 'Ninguna', 'IPN', 'Cedula Enfe 1');
+
+#Procedure para "borrar" a un usuario.
+call sp_BajaUsuario(4, 0);#Aqui niega el acceso ya que es una enfermera
+
+#Procedure para "borrar" a un usuario.
+call sp_BajaUsuario(2, 'CurpPaciente1');#La secre y el admi pueden dar de baja.
+
+call sp_ConsultaUsuario('CurpPaciente1');
+
+call sp_CambiaUsuario(4, 'enfe1', 'CurpEnfe1', 'enfe1@yahoo.com', 'Enfer', 'Mera', 'Uno.2', current_date, 'A+', 'Universidad', 'Ninguna', 'IPN', 'Cedula Enfe 1', 2);
+
+#----------------------VIERNES 27-------------------
+#Hacemos un login correcto:
+call sp_login('norma@yahoo.com', 'normita', 0);
+#Obtenemos los daots par ala sesion despues de un login
+call sp_sesiones('norma@yahoo.com', 'normita');
+#Hacemos una consulta express
+call sp_ConsultaExpressAM('CurpPaciente6',0,'contrapaciente','Anotaciones prueba','paciente58@yahoo.com',2,1.80,58.3, 16, 'ROCIO','Castillo', 'Reyes',1	,8,3);#accion.- 1-alta
+#curp_PACIENTE-sexo-contraseña-Anotaciones-correo_PACIENTE-id_dotor-estatura-peso-edad-nombre-paterno-materno-accion-id_modificar-enfermedad
+#Hacemos una consulta no agendada
+call sp_ConsultaAltaModificacion('Anotaciones prueba con devuelta de id','CurpPaciente7',1,2,1.333380,58.3, 16,0,1,2); #1-alta
+#Anotaciones-Curp_Paciente-tipo-id_doctor-estatura-peso-edades-accion-enfermedad-id_consulta_modif(solo si hay accion!=1)
+call sp_RecetaAltaModificacion('Descripion de la receta modificada', 79,2, 2,1,5);#Ultimos 2 numeros 1-alta, id_receta
+#descripcion-id_consulta-id_paciente-id_doctor-accion(1:Alta !1:Modificacion)-id_modif
+call sp_JustAM(17, 'CurpPaciente8','27471243', 90, 'Justificacion escrita por el doctor yeah',1,1);
+#id_doctor-email-telefono-edad-justificacion-accion(1:Alta de usuario !1:Modificacion)-id_modificacion
+#Baja Consulta
+call sp_bajaConsulta(105);#id-consulta
+#Baja Justificante
+call sp_bajaJustificante(19);#id-justificante
+#Justificacion Alta o Modificacion
+call sp_ConsultaDoctor(2,2)	; #tipo 1= consulta, 2= recetas, 3= justificantes
+#id_doctor-tabla a consultar
+call sp_DatosAuxiliares(1,2,23);
+#id_paciente-id_doctor-id_consulta
+#Agregando Tipos enfermedades
+call sp_Enfermedades();
+#Llamando la relacion doctor-paciente
+call sp_PacienteDoctor(2,1);
+#tipo-id_usuario: tipo 0: obtengo paciente, tipo 1:obtengo doctores
+#ista previa de expedientes
+call vistaExpedientes(4);#id_paciente
+call sp_Nombres(1);#id_usuario
+#crea las vistas previas para las consultas
+call sp_vistaConsulta(4, 2, 80);
+#id_paciente-id_doctor-id_consultas
+#Obtener los puros datos personales de un usuario
+call sp_DatosPersonales(3);
+#id paciente o empleado
+#Obtener todos loshh datos reacionados a un consulta asi como su receta correspondiente
+call  sp_ConsultaDoc(80);
+#id_consulta
+#Obtener los datos de la tabla receta
+call sp_RecetaDoc(7);
+#id_receta
+#Obtener los datos de la tabla justificante
+call sp_JustificanteDoc(7);
+#id_justificante
+#odificacion de contraseña
+call contraseña('norma@yahoo.com', 1, 'normita');
+#email-accion(0 consulta, 1 modificacion)-nueva contraseña
+call llenar_parentescos();
+#Obtener los id's de los parentescos
+call sp_obtenerparentescos('norma@yahoo.com');
+#Borrar relacion familiar
+call sp_borrarparentescos('norma@yahoo.com','castilloreyesjuan@gmail.com','rocio',11);
+#Existe el correo?
+call existecorreo('norma@yahoo.com');
+#Obtneog los id's de un correo
+call sp_obtenercorreos('paciente58@yahoo.com');
+#Vinculación del correo
+call sp_vincularcorreos('norma@yahoo.com',13, 3);
+#Reviza si esta dado de alta en la tabla de paciente_correo
+call sp_familia('paciente58@yahoo.com');
+#Aceptar solicutudes
+call sp_aceptarSolicitud('norma@yahoo.com', 11);
+#Rechazar solicitudes
+call sp_rechazarSolicitud('norma@yahoo.com', 13);

@@ -1,0 +1,324 @@
+create database saclife;
+use saclife;
+
+#Tabla que guarda la información de los clientes
+create table cliente(
+	-- Id del cliente
+    id_cliente int primary key,
+    -- Email principal
+    email nvarchar(100) not null,
+    -- Contraseña para accesar al sistema.
+    contra nvarchar(200) not null,
+    -- Nombre de la clinica o doctor
+    nombre_cliente nvarchar(50) not null,
+    -- Tipo de cliente, 0=clinica, 1=doctor.
+    tipo bool default 1 not null,
+    -- Fecha en la que se registro al sistema.
+    fecha_registro date not null,
+    -- Dirección principal
+    direccion nvarchar(200) not null,
+    -- Telefono Principal
+    telefono nvarchar(100) not null,
+    -- Url donde se ubica su imagen de perfil
+    logo nvarchar(200) not null,
+    -- Slogan de la clinica o doctor
+    slogan nvarchar(50) not null default '#SACyourhealth',
+    -- Si es un usuario premium o free. 0=premium, 1=free. 2=demo
+    premium int default 2 not null    
+);
+
+#Tabla que relaciona a los clientes con telefonos.
+create table telefono_cliente(
+	id_telefono int primary key,
+    id_cliente int not null REFERENCES cliente,
+    telefono nvarchar(50) not null,
+    tipo nvarchar(50) not null default 'Telefono secundario'
+);
+
+#Tablaque almacena las direcciones de los clientes
+create table direccion_cliente(
+	id_direccion int primary key,
+    id_cliente int not null REFERENCES cliente,
+    direccion nvarchar(200) not null,
+    tipo nvarchar(50) not null default 'Direccion secundaria'
+);
+
+#Tabla que almacena la información de otra sucursal (Solo para premium)
+create table sucursal(
+	id_sucursal int not null,
+    id_cliente int not null references cliente,
+    nombre_sucursal nvarchar(50) not null,
+    fecha_registro date not null
+);
+
+#Tabla que almacena la informacion de los usuarios del sistema (tanto empleado como pacientes)
+create table usuario(
+	id_usuario int primary key,
+    #Idenficador del usuario (en el caso de ser doctor sera su RFC, si es paciente este sera generado por el paciente)
+    contraseña nvarchar(100) not null,
+    #Contraseña del usuario para accesar al sistema.
+	tipo int not null, #Tipo de empleado, si hay más empleados, se pueden seguir agregando más tipos.
+    #0=Super Admi, 2= Secretaria, 1=Doctor, 3=Enfermera, 4=Paciente
+    curp nvarchar(100) not null,
+    #Nos Sirve para evitar que se registre dos veces a un mismo usuario.
+    correo nvarchar(100) not null,
+    #Correo electronico del usuario.
+	nombre nvarchar(50) not null,
+    #Nombre(s) del usuario.
+    apellido_p nvarchar(50) not null,
+    #Apellido paterno del usuario.
+    apellido_m nvarchar(50) not null,
+    #Apellido materno del usuario.
+    fecha_nacimiento nvarchar(50) not null,
+    #Fecha de nacimiento del usuario.
+    estado bool not null default 1,
+    #0=Usuario No Activo, 1= Usuario Activo
+	sexo bool not null,
+	#0=Masc, 1=Fem
+	tipo_sangre nvarchar(10) not null
+);
+
+#Tabla que almacena la informacion de los empleados en el sistema.
+create table empleado(
+	id_empleado int primary key references usuario(id_usuario),
+    #ID del empleado, que es obtenido de usuario.
+	grado_estudios nvarchar(100) not null,
+	#Grado de estudios del empleado, no importa que ocupación tenga.
+	especialidad nvarchar(100) not null default 'Ninguna',
+	#La especialidad es mas para doctores y por eso el default es ninguna
+	institucion nvarchar(100) not null,
+	#Necesaria para la expedición de recetas y expedientes formales
+	cedula_profesional nvarchar(120) not null
+	#Necesaria para la expedición de recetas y expedientes formales asi como para la consulta
+);
+
+#Tabla que almacena la informacion de los pacientes en el sistema.
+create table paciente(
+	id_paciente int primary KEY references usuario(id_usuario)
+	#Identificador del paciente, obtenido de usuario.
+);
+#Control familiar
+create table paciente_correo(
+	id_paciente int not null references usuario(id_usuario),
+	correo nvarchar(100) not null references usuario(correo),
+	id_parentesco int not null references parentescos(id_parentesco),
+	solicitud int not null 
+);
+#Parentescos
+create table parentescos(
+	id_parentesco int not null primary key,
+	parentesco nvarchar(50) not null
+);
+#Paciente-doctor
+create table paciente_doctor(
+	id_paciente int not null references paciente,
+	id_empleado int not null references empleado
+);
+#Paciente-enfermedad
+create table paciente_enfermedad(
+	id_paciente int not null references paciente,
+	id_enfermedad int not null references enfermedades
+);
+#Paicente-Contacto
+create table paciente_contactos(
+	id_paciente int not null references paciente,
+	id_contacto int not null references contactoss
+);
+#Enfermedades
+create table enfermedades(
+	id_enfermedad int primary key,
+	enfermedad nvarchar(30) not null,
+	descripcion nvarchar(300) not null
+);
+#Contactos
+create table contactos(
+	id_contacto int primary key,
+	nombre nvarchar (100) not null,
+	correo nvarchar (50) not null,
+	telefono nvarchar (50) not null
+);
+#En la tabla agenda se almacena toda la informacion sobre los eventos que se sucitan en la clinica (consultas, analisis clinicos, otros)
+create table agenda(
+	id_evento int primary key, 
+    #Identificador del evento generado por el sistema.
+    id_creador nvarchar(100) not null references usuario(id_usuario), 
+    #ID del usuario que creo el evento
+    fecha timestamp not null,
+    #Fecha en la que el evento se realizara
+	descripcion text not null,
+    #Descripcion del evento
+    tipo int not null,
+    #Tipo 0 = evento especial, Tipo 1=consulta, 2= Analisis, 3=Otro(Especificar)
+    estado bool not null default 1
+    #0=Evento que ya pasó, 1=Evento por llevarse acabo
+);
+
+#Tabla consulta almacenara toda la informacion de las consultas
+create table consulta(
+	id_consulta int primary key,
+    #Identificador de la consulta generado por el sistema.
+    id_evento int not null,#borrando el references agenda ya que puede haber consultas de emergencia o sin cita...
+	#JDCR:Si es consulta con cita jalamos los datos de tabla cita, si NO lo es el creasmo un nuevo registro en agenda y luego en consulta
+    #Como las consultas son eventos tambien, este es el id del evento con el que esta relacionada la consulta.
+	tipo int not null,
+	#0: Consulta agendadA 1:Consulta no agendad, 2: consulta a Externo
+    id_doctor int not null references empleado(id_empleado),
+    #Id del doctor al que le toca atender la consulta
+    id_paciente nvarchar(100) not null,
+    #Id del paciente al que le toca asistir a la consulta
+    #Con los ID´s obtendremos:
+    #Para pacientes:
+    #nombre, tipo de sangre, sexo.
+    #Para doctores:
+    #nombre, grado de estudios, especilaidad, insititucion, cedula, dir. clinica
+	edad  int null,
+	#edad del paciente al tomar la consulta
+	peso float not null,
+	#peso a la hora de la consulta
+	estatura float not null,
+	#tipo de enfermedad
+	descripcion nvarchar(300) not null,
+	#Anotaciones que se deseen hacer sobre la consulta
+	id_enfermedad int not null references enfermedades 
+	#Tipos de enfermedad: 0=no hay enfermedad, 1=Accidentes y Lesiones, 2=Aparato Digestivo, 3= Aparato Respiratorio,
+	#4=Cardiovasculares, 5=Dermatología, 6=Endocrinologia y Nutricion, 7=ETS, 8=Enfermdades Infecciosas, 9=Hematología
+	#10=Huesos, Articulaciones y Musculos, 11= Oftalmologia, 12=Otorriniolaringologia, 13=Psiquiatria, 14=Sistema Nervioso
+	#15=Urologia, 16=Cancer, 17=Enfermedad
+);
+
+#Tabla receta almacena toda la informacion de las recetas expedidas durante las consultas
+create table receta(
+	id_receta int primary key,
+    #Identificador de la receta generado por el sistema..
+	id_consulta int not null REFERENCES consulta(id_consulta),#Hace ref ahora a consulta y no a agenda para solo permitir expedir si hay consulta pervia
+    #Id de la consulta en la que se expidio la receta.
+	#DATOS DE CONSULTA: fecha,edad, peso. 
+    id_paciente int not null,
+    #DATOS A OBTENER DE PACIENTES: Nombre, tipo de sangre, sexo
+	id_doctor int not null references empleado(id_empleado),
+    #DAOTS A OBTENER DE DOCTOR:ombre, grado de estudios, especilaidad, insititucion, cedula, dir. clinica
+	estado int not null default 1,
+    #0=La receta ya no es valida, 1=la receta es valida
+	descripcion_receta nvarchar(500) not null
+	#aqui va la dosis, via y frecuencia(esto anotarlo en html, instrucciones, usabilidad)
+);  
+
+#Tabla que sirve para guardar los justificantes expedidos
+create table justificantes(
+	id_justificante int primary key,
+	#id del justificante generado por el sistema
+	id_doctor int not null references empleado(id_empleado),
+    #ID del doctor que expidio el expediente
+	id_paciente int not null,
+    #ID del paciente al que se le expidió el justificante.
+	#obtener nombres de doctor, paciente con stores y selects y variables; esto es para cuando se muestren los datos
+	#DATOS A OBTENER PARA DOCTOR
+	#nombre, grado de estudios,cedula profesional, direccion
+	#DATOS A OBTENER PAR PACIENTE
+	#nombre, tipo de sangre, sexo
+	telefono nvarchar(30) not null,
+	#telefono de contacto porsi se desea confirmar el telefono
+	edad int not null,
+	#edad del paciente al expedir el justificante
+	fecha_expedicion timestamp not null,
+    #Fecha en la que se hizo  el justficante
+	justificacion nvarchar(250) not null,
+	estado int not null default 1 
+);
+
+#Tabla que sirve para guardar las direcciones de los usuarios (sus domicilios)
+create table direcciones(
+	id_direccion int primary key,
+    #ID de la direccion creado por el sistema.
+    id_usuario int not null references usuario,
+    #ID del usuario al que le pertenece la direccion.
+    direccion nvarchar(200) not null default 'Sin Especificar Dirección :/',
+    #Dirección en si xD.
+    tipo nvarchar(50) not null default 'Dirección principal'
+);
+
+#Tabla que almacena los telefonos de los usuarios.
+create table telefonos(
+	id_telefono int primary key,
+    #ID del telefono creado por el sistema.
+    id_usuario int not null references usuario,
+    #ID del usuario al que le pertenece el telefono.
+    telefono nvarchar(30) not null default 'Sin Especificar Telefono :/',
+    #Digitos del telefono
+    tipo nvarchar(50) not null default 'Telefono principal'
+    #Que tipo de direccion es, (celular, del trabajo, etc).
+);
+
+#Permite llevar un control del ingreso al Ssitema
+create table login(
+	id_login int not null primary key,
+	#id del lgin que se hizo
+	correo nvarchar(100) references usuario(correo),
+	#id del ususario que inicio login
+	fecha timestamp not null,
+	#fecha de cuando se inicio sesion
+	plataforma int not null
+	#0=web(.jsp) 1=movil(.apk) 2=escritorio(.jar)
+);
+
+#Cambios 
+create table cambios(
+	id_empleado int not null references empleado,
+		#Emeplado que hizo el cambio
+	tabla_cambio nvarchar(50) not null,
+		#Tabla a la que se hizo un cambio
+	id_cosa int not null,
+		#id de recata o consulta, etc.
+	fecha timestamp not null default current_timestamp
+		#Fecha en que hizo el cambio
+);
+
+#Chat
+	#Chat General: Almacena los datos generales para un chat
+create table chat(
+	id_chat int primary key,
+	id_doctor int not null references empleado(id_empleado), 
+		#Referencia al doctor que hizo el chat
+	id_paciente int not null references paciente,
+		#id hace refencia a paciente que hizo el chat
+	fecha timestamp not null default current_timestamp,
+		#Fecha permite guardar cuando se hizo el video. 
+	tipo int not null default 0 #0-Normal
+);
+	
+#Chat Video: Almacena los datos de un chat de video
+create table chat_video(
+	id_chat int primary key references chat,
+		#Referencia al chat
+	duracion float not null default 0
+		#Referencia a la duracion de un chat de video
+);
+	
+#Chat Escrito: ALmacenar los mensajes
+create table mensaje(
+	id_mensaje int primary key auto_increment, 
+		#idmensaje permite ordenar los mensajes que se envian
+	id_chat int references chat,
+		#Referenecia al chat
+	id_usuario int not null references usuario,
+		#Referencia al usuario que mando un mensaje en un chat
+	texto nvarchar(300),	
+		#Mensaje escrito
+	fecha timestamp default current_timestamp
+		#Fecha en que se realizo el mensaje
+);
+
+#Emergencias
+	#Almacena los datos necesarios para completar uan emergencia
+create table emergencia(
+	id_emergencia int primary key,
+	#Id de la emergencia creada
+	id_empleado int not null references empleado,
+	#id del empleado que atendera la llamada de emergencia
+	id_paciente int not null references paciente,
+	#Id del paciente que realizo la emergencia
+	fecha timestamp not null default current_timestamp,
+	#Fecha en la que se realizo la emergencia
+	ubicacion nvarchar(500) not null
+	#Ubicacion al momento de la emergencia
+);

@@ -1,0 +1,155 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : 18/02/2015, 12:06:13 AM
+    Author     : JuanDaniel
+*/
+body{
+    font-size: 16px;
+}
+.center{
+    text-align: center;
+}
+.header{
+    box-shadow:0px 2px 2px #09141B;
+}
+.header h1{
+    font-size: 2em;
+    color: #32739A;
+    text-align: center;
+    font-weight: 300;
+    letter-spacing: 2px;
+}
+.header p{
+    text-align: center;
+}
+.header-nav{
+    width: 100%;
+    margin-top: 2em;
+    border-bottom: .3em solid #47a3da; 
+}
+.header-nav a{
+    text-decoration: none;
+    font-weight: 300;
+    letter-spacing: 2px;
+    padding: 1em 2em;
+    color: white;
+    display: inline-block;
+    text-transform: uppercase;
+}
+.header-nav ul {
+	margin: 0;
+	padding: 0;
+	list-style-type: none;
+        text-align: center;
+        overflow:hidden;
+}
+.header-nav > ul > li {
+	display: inline-block;
+	margin: 0 1em;
+	background-color: #47a3da;
+        border-top-left-radius:  3px;
+        border-top-right-radius:  3px;
+}
+.header-span {
+	background: #47a3da;
+	width: 100%;
+	left: 0;
+}
+/*-------------------BUTTONS-----------------*/
+.button{
+    background-color: #47A3DA;
+    border: .2em solid;
+    border-color: #47A3DA;
+    border-radius: .2em;
+    box-shadow: 0 .2em 0 #32739A;
+    font-size:1em;
+    padding: 1em 0;
+    color: white;
+    transition: all 0.3s ease;
+    -webkit-transition: all 0.3s ease;
+    -moz-transition: all 0.3s ease;
+    -ms-transition: all 0.3s ease;
+    -o-transition: all 0.3s ease;
+}
+.linker{
+    text-decoration: none;
+}
+.linker:focus{
+    position: relative;
+    top:5px;
+    box-shadow: 0 0 0;
+}
+article a{
+    text-decoration: none;
+}
+.section-data{
+    overflow:hidden;
+}
+.section-data h1{
+    text-align: center;
+    color: #32739A;
+}
+.form-article{
+    width:80%;
+    margin: 1em auto;
+    background-color: #47a3da;
+    overflow:hidden;
+    padding: 1em;
+}
+.form-article p{
+    text-align: right;
+    color: white;
+    display:inline-block;
+    width:20%;
+   }
+.form-article .form-input{
+    width:50%;
+    margin:0.5em 0em 0.5em 2em;
+    border: 0px;
+    border-radius: 5px;
+    padding: 1em;
+    display: inline-block;
+}
+.button-formulario{
+    background-color:#32739A;
+    margin: 1em;
+    padding: 0.5em;
+    border: 0px;
+    border-radius: 5px;
+    color: white;
+    width: 15em;
+}
+.form-span {
+    width: 100%;
+    overflow: hidden;
+    display: block;
+}
+.vista_previa{
+    width: 40%;
+    border-radius: 10px;
+    background-color: #D0D0D0;
+    margin: 1em;
+    display: inline-block;
+}
+.red{
+    background-color: #9A2817;
+}
+.green{
+    background-color: #095A1E;
+}
+.no-float{
+    float: none;
+}
+//****MEDIA QUERYS***
+@media screen and (max-width: 1000px){
+    .header-nav > ul > li {
+	display: block;
+    }
+    h1{
+        background-color: red;
+    }
+}

@@ -1,0 +1,1113 @@
+use saclife;
+
+-- Procedure para vaciar la base
+delimiter $
+create procedure sp_DropDatabase()
+begin
+	drop database saclife;
+end $
+delimiter ;
+
+-- Procedure para dar de alta a un cliente
+delimiter $
+create procedure sp_AltaCliente(in email nvarchar(100), 
+in contra nvarchar(200), in nombre_cliente nvarchar(50),
+in tipo bool, in direccion nvarchar(200), 
+in telefono nvarchar(100), in logo nvarchar(200),
+in slogan nvarchar(50))
+begin
+	declare existe int;
+    declare id_cliente int;
+    declare id_usuario int;
+    select count(*) into existe from cliente where cliente.email=email;
+    if existe=0 then
+        if slogan='' then
+			insert into cliente values(email, contra, nombre_cliente, tipo, current_timestamp, direccion, telefono, logo, default, default, default, default);
+        else
+			insert into cliente values(email, contra, nombre_cliente, tipo, current_timestamp, direccion, telefono, logo, slogan, default, default, default);
+        end if;
+        select 1 valido, ('Cliente registrado con éxito') msj;
+    else
+		select 0 valido, ('Email en uso :/') msj;
+    end if;
+end $
+delimiter ;
+
+-- Procedure para obtener la informacion del cliente
+delimiter $
+create procedure sp_ConsultaCliente(in email nvarchar(100))
+BEGIN
+	select * from cliente where cliente.email=email;
+end $
+delimiter ;
+
+-- Primer procedure para la alta de un usuario, desde aqui tambien se registra al mismo tiempo si es empleado o paciente.
+delimiter $
+create procedure sp_AltaUsuario(
+in contraseña nvarchar(100), in tipo int, in correo nvarchar(100), in nombre nvarchar(50), in apellido_p nvarchar(50), in apellido_m nvarchar(50))
+#El parametro tipo empleado, siempre va a recibir un valor, aunque desde la programacion nosotros controlaremos que manda, pero no puede ser null
+begin
+	declare existe int;#Variable que sirve para saber si el usuario ya esta registrado o no.
+	declare id int;
+	select count(*) into existe from usuario where usuario.correo=correo; #Hacemos un conteo de los registros a partir del curp
+    if existe=0 then #Si no hay registros
+		set id=(select ifnull(max(id_usuario), 0)+1 from usuario);
+		insert into usuario values(id, contraseña, tipo, correo, nombre, apellido_p, apellido_m, default);
+		#Realizamos insert a la tabla usuario correspondiente.
+		select 1 valido, ('Usuario Registrado con Exito') msj;
+	else #Si existe no es igual a 1 entonces:
+		select 0 valido, ('Usuario ya registrado') msj;#Significa que el usuario ya esta registrado en el sistema.
+	end if;	#Cierre del if de existe=0
+end $
+delimiter ;
+
+delimiter $
+-- Procedure para dar de alta a un empleado.
+create procedure sp_AltaEmpleado(in id_empleado int, in grado_estudios nvarchar(100), in especialidad nvarchar(100), in institucion nvarchar(100), in cedula nvarchar(100))
+begin
+	declare existe int;
+    select count(*) into existe from empleado where empleado.id_empleado=id_empleado;
+    if existe=0 THEN
+		insert into empleado values(id_empleado, grado_estudios, especialidad, institucion, cedula);
+        select 1 valido, ('Empleado registrado éxitosamente') msj;
+    else
+		select 0 valido, ('Empleado ya existe') msj;
+	end if;
+end $
+delimiter ;
+
+delimiter $
+-- Procedure para dar de alta a un empleado.
+create procedure sp_AltaPaciente(in id_paciente int, in curp nvarchar(100), in nacimiento nvarchar(100), in sexo bool, in tipo_sangre nvarchar(10))
+begin
+	declare existe int;
+    select count(*) into existe from paciente where paciente.id_paciente=id_paciente;
+    if existe=0 THEN
+		insert into paciente values(id_paciente, curp, nacimiento, sexo, tipo_sangre);
+        select 1 valido, ('Paciente registrado éxitosamente') msj;
+    else
+		select 0 valido, ('Paciente ya existe') msj;
+	end if;
+end $
+delimiter ;    
+
+#Procedure para dar de baja a un usuario
+delimiter $
+create procedure sp_BajaUsuario(in id_empleado int, in curp nvarchar(100))
+begin
+	declare existe1 int;
+    declare existe2 int;
+    declare tipe int;
+    declare id int;
+	select count(*) into existe1 from empleado where empleado.id_empleado=id_empleado;
+    if existe1=1 then
+        set tipe=(select tipo from usuario where usuario.id_usuario=id_empleado);
+        select id_usuario into id from usuario where usuario.curp=curp;
+        if tipe=1 or tipe=0 then
+			select count(*) into existe2 from usuario where usuario.id_usuario=id;
+			if existe2=1 then
+				update usuario set usuario.estado=0 where usuario.id_usuario=id;
+				insert into cambios values(id_empleado,'usuario', id, default);
+				select 1 valido, ('Usuario Dado de Baja') msj;
+			else
+				select 0 valido, ('Usuario Inexistente :/') msj;
+			end if;
+		else
+			select 0 valido, ('Usted no esta autorizado para esto 1:/') msj;
+		end if;
+	else
+		select 0 valido, ('Usted no esta autorizado para esto 2:/') msj;
+    end if;   
+end $
+delimiter ;
+
+#Procedure para consultar un usuario
+delimiter $
+create procedure sp_ConsultaUsuario(in correo nvarchar(100))
+begin
+	declare existe int;
+    declare existe1 int;
+    declare existe2 int;
+    declare id int;
+    select count(*) into existe from usuario where usuario.correo=correo and estado=1;
+    if existe=1 then -- Verificamos que sea un usuario activo.
+		select id_usuario into id from usuario where usuario.correo=correo;
+        select count(*) into existe1 from empleado where empleado.id_empleado=id;
+        if existe1=1 then -- Verificamos si es un empleado.
+			select * from usuario, empleado where usuario.id_usuario=id and empleado.id_empleado=id;
+		else
+			select count(*) into existe2 from paciente where paciente.id_paciente=id;
+            if existe2=1 THEN -- Verificamos si es un paciente
+				select * from usuario, paciente where usuario.id_usuario=id and paciente.id_paciente=id;
+			ELSE -- Entonces es un administrador o secretaria.
+				select * from usuario where usuario.id_usuario=id;
+			end if;
+		end if;
+    else
+		select 0 id_usuario; -- No esta activo/registrado.
+	end if;
+end $
+delimiter ;
+
+#Procedure para cambiar datos de un usuario
+delimiter $
+create procedure sp_CambiaUsuario(in id_usuario int, in contraseña nvarchar(100), in curp nvarchar(100), in correo nvarchar(100), in nombre nvarchar(50), in apellido_p nvarchar(50), 
+in apellido_m nvarchar(50), in fecha_nacimiento date, in tipo_sangre nvarchar(10), 
+in grado_estudios nvarchar(100), in especialidad nvarchar(100), in institucion nvarchar(100), in cedula_profesional nvarchar(120), in id_empleado int)
+begin
+	declare existe1 int;
+    declare existe2 int;
+    declare tip int;
+    declare tipo int;
+	select count(*) into existe1 from empleado where empleado.id_empleado=id_empleado;
+    if existe1=1 then
+        set tip=(select usuario.tipo from usuario where usuario.id_usuario=id_empleado);
+        if tip=1 or tip=0 then
+			select count(*) into existe2 from usuario where usuario.id_usuario=id_usuario;
+            set tipo=(select usuario.tipo from usuario where usuario.id_usuario=id_usuario);
+			if existe2=1 then
+				update usuario 
+					set usuario.contraseña=contraseña, usuario.curp=curp, 
+					usuario.correo=correo, usuario.nombre=nombre, usuario.apellido_p=apellido_p, usuario.apellido_m=apellido_m,
+					usuario.fecha_nacimiento=fecha_nacimiento, usuario.tipo_sangre=tipo_sangre
+					where usuario.id_usuario=id_usuario;
+				if tipo!=4 then
+					update empleado set empleado.grado_estudios=grado_estudios,
+					empleado.especialidad=especialidad, empleado.institucion=institucion, empleado.cedula_profesional=cedula_profesional
+                    where empleado.id_empleado=id_usuario;
+				end if;
+				insert into cambios values(id_empleado,'usuario', id_usuario, default);
+				select 1 valido, ('Usuario Modificado correctamente') msj;
+			else
+				select 0 valido, ('Usuario Inexistente :/') msj;
+			end if;
+		else
+			select 0 valido, ('Usted no esta autorizado para esto 1 :/') msj, tip as tiposs;
+		end if;
+	else
+		select 0 valido, ('Usted no es un empleado :/') msj;
+    end if;   
+end $
+delimiter ;
+
+#Procedure para dar de alta un evento (esto incluye a las consultas), AUN NO TERMINADO !!.
+delimiter $
+create procedure sp_AltaEvento(
+in id_creador nvarchar(100), in fecha timestamp, in descripcion text, in tipo int,
+in tipo_consulta int, in id_doctor nvarchar(100), in id_paciente nvarchar(100), in edad int, in peso int, in estatura float,
+in anotaciones text
+)
+begin
+end $
+delimiter ;
+
+#proceudre para permitir el acceso al login, redirigir y llevar un control de los ingresos
+delimiter $
+create procedure sp_login(in email nvarchar(100), pass nvarchar(100), in platform int(2))
+begin 
+	declare id_log int(4);
+	declare existe int(1);
+	declare existe2 int(1);
+	declare datec timestamp;
+	set datec=(curtime());
+	set existe=(select count(*) from usuario where usuario.correo=email and usuario.contraseña=pass);
+	if existe=1 then
+		set id_log=(select ifnull(max(id_login), 0)+1 from login);
+		insert into login(id_login,correo,fecha, plataforma) values(id_log, email, datec,platform);
+		select 1 valido, ('Bienvenido Usuario') msj;
+		else
+			set existe2=(select count(*) from cliente where cliente.email=email and cliente.contra=pass);
+            if existe2=1 THEN
+				set id_log=(select ifnull(max(id_login), 0)+1 from login);
+				insert into login(id_login,correo,fecha, plataforma) values(id_log, email, datec,platform);
+				select 2 valido, ('Bienvenido Cliente') msj;
+            else
+				select 0 valido, ('No estas registrado :/') msj;
+            end if;
+	end if;
+end $
+delimiter ;
+
+#Procedure para obtener los datos de las sesiones
+delimiter $
+create procedure sp_sesiones(in email nvarchar(100), pass nvarchar(100))
+begin 
+	select * from usuario where usuario.correo=email and usuario.contraseña=pass;
+end $
+delimiter ;
+
+#Procedure para dar de alta una CONSULTA EXPRESS.---------------------------------------------------------
+delimiter $
+create procedure sp_ConsultaExpressAM(in curps nvarchar(100),in sexo int, in contra nvarchar(100), in anotaciones nvarchar(300), in email nvarchar(100), 
+in id_doctor nvarchar(100),in estatura int(4), in peso int(4), in edad int, in nombres nvarchar(50),
+in apellido_ps nvarchar(50), in apellido_ms nvarchar(50),in accion int, in id_modif int,in id_enfermedad int)
+begin 
+	declare id_consultas int;
+	declare id_usuarios int;
+	declare id_pacientes int;
+	declare id_eventos int;
+	declare datec timestamp;
+	declare existe int;
+	declare activo int;
+	declare existe_relacion int;
+	set id_consultas=(select ifnull(max(id_consulta), 0)+1 from consulta);
+	set id_eventos=(select ifnull(max(id_evento), 0)+1 from agenda);
+	set datec=(curtime());
+	if accion=1 then
+		#validando si el usuario ya existe o no
+			set existe=(select count(*) from paciente where paciente.curp=curps);
+			if existe =1 then
+			#Si el usuario ya existe obtengo su id y hago una consulta normal
+				set activo=(select  count(*) from paciente where paciente.curp=curps);
+				#Valido que el usuario este activo
+				if activo!=0 then
+					set id_pacientes=(select id_paciente from paciente where paciente.curp=curps);
+					#alta de una consulta normal
+					insert into agenda values(id_eventos,id_doctor,datec,'Dar de alta un usuario y crear su primer consulta',1,1);
+					#Ese evento de tipo especial es una consulta asi que la agregamos
+					insert into consulta values(id_consultas,id_eventos,1,id_doctor,id_pacientes,edad,peso,estatura,anotaciones,id_enfermedad);
+					#Como no hay un id para obtener los datos de la tabla usuario hacemos un insert a la tabla conuslta externa
+						#Haciendo el alta a la tabla paciente_doctor
+					set existe_relacion=(select count(*)from paciente_doctor where id_paciente=id_pacientes and id_empleado=id_doctor);
+					if existe_relacion = 0 then
+						insert into paciente_doctor values(id_pacientes,id_doctor);
+					end if;
+				select 2 valido, ('Este paciente ya habia sido dado de alta, la consulta sera creada con los datos que ya teniamos.')msj, id_pacientes paciente, id_consultas consulta;
+				else
+				select 0 valido, ('Este paciente fue dado de baja, poder activarlo de nuevo visita la sección Usuarios')msj;
+				end if;
+			else
+				#Si el usuario no existe hago una alta a usuario obtengo el id creado y hago una consulta normal
+					#creando a un nuevo usuario
+					set id_usuarios=(select ifnull(max(id_usuario), 0)+1 from usuario);
+					insert into usuario values (id_usuarios,contra,4,email,nombres,apellido_ps,apellido_ms, 1);
+					#creando un nuevo paciente
+					insert into paciente values (id_usuarios, curps, 'Nacimiento aun no dado de alta', sexo,'Missing');
+				#Hacemos una consulta normal
+				insert into agenda values(id_eventos,id_doctor,datec,'Dar de alta un usuario y crear su primer consulta',1,1);
+				#Ese evento de tipo especial es una consulta asi que la agregamos
+				insert into consulta values(id_consultas,id_eventos,1,id_doctor,id_usuarios,edad,peso,estatura,anotaciones,id_enfermedad);
+				#Como no hay un id para obtener los datos de la tabla usuario hacemos un insert a la tabla conuslta externa
+					#Haciendo el alta a la tabla paciente_doctor
+					set existe_relacion=(select count(*)from paciente_doctor where id_paciente=id_usuarios and id_empleado=id_doctor);
+					if existe_relacion =0 then
+						insert into paciente_doctor values(id_usuarios,id_doctor);
+					end if;
+				select 1 valido, ('El paciente ha sido dado de alta, y su primer consulta fue creada') msj, id_usuarios as paciente, id_consultas consulta;
+			end if;
+		else
+		update consulta_express set correo=email, nombre=nombres,apellido_p=apellido_ps, apellido_m=apellido_ms where id_consulta=id_modif;
+		select 3 valido, ('Consulta Modificada')msj;
+	end if;
+end $
+delimiter ;
+
+#Procedure para dar de ALTA y MODIFICACION una CONSULTA NORMAL YA AGENDAD O NO AGENDADA.
+delimiter $
+create procedure sp_ConsultaAltaModificacion(in anotaciones nvarchar(300), in curps nvarchar(100),in tipo int, in id_doctor nvarchar(100),in estaturas int(4), in pesos int(4), in edads int, in accion int, in enfermedads int, in id_modif int)
+begin 
+	declare consulta_id int;
+	declare evento_id int;
+	declare paciente_id int;
+	declare datec timestamp;
+	declare activo int;
+	declare existe int(1);
+	declare existe_relacion int;
+	set paciente_id=(select id_paciente from paciente where paciente.curp=curps);
+	set consulta_id=(select ifnull(max(id_consulta), 0)+1 from consulta);
+	set evento_id=(select ifnull(max(id_evento), 0)+1 from agenda);
+	set datec=(curtime());
+	set existe=(select count(*) from paciente where paciente.curp=curps);
+	if accion=1 then
+		if existe=1 then 
+			#verificando que el usuario este activo
+			set activo=(select count(*) from usuario,paciente where usuario.estado=1 and paciente.curp=curps);
+			if activo!=0 then
+			#Crando un vento de tipo especial
+				insert into agenda values(evento_id,id_doctor,datec,'Consulta creada a un usuario registrado pero sin agenda',1,1);
+				#Ese evento de tipo especial es una consulta asi que la agregamos
+				insert into consulta values(consulta_id,evento_id,tipo,id_doctor,paciente_id,edads,pesos,estaturas,anotaciones,enfermedads);
+				#Como no hay un id para obtener los datos de la tabla usuario hacemos un insert a la tabla conuslta externa
+					#Haciendo el alta a la tabla paciente_doctor
+						set existe_relacion=(select count(*)from paciente_doctor where id_paciente=paciente_id and id_empleado=id_doctor);
+						if existe_relacion =0 then
+							insert into paciente_doctor values(paciente_id,id_doctor);
+						end if;
+				select 1 valido, ('Consulta Creada')msj, paciente_id paciente, consulta_id consulta;
+			else
+				select 0 valido, ('La consulta no pudo ser Creada. El Curp ingresado pertenece a un Paciente dado de baja, para darlo de alta ingresa a Sección Modificar Usuario.') msj;
+			end if;
+		else
+			select 0 valido, ('La Consulta no pudo ser Creada. El Curp ingresado es incorrecto.') msj;
+		end if;
+	else
+		update consulta set descripcion=anotaciones, edad=edads, peso=pesos, estatura=estaturas, id_enfermedad=enfermedads where id_consulta=id_modif;
+		select 2 valido, ('La Consulta ha sido Modificada con Éxito')msj;
+	end if;
+end $
+delimiter ;
+
+#ALTA Y MODIFICACION de RECETA
+delimiter $
+create procedure sp_RecetaAltaModificacion(in descrip nvarchar(300), in id_consultas int,in id_paciente nvarchar(100), in id_doctor int,in accion int, in id_modif int)
+begin
+	declare id_recetas int;
+	declare existe_consulta int;
+	set id_recetas=(select ifnull(max(id_receta), 0)+1 from receta);
+	if accion=1 then
+		set existe_consulta=(select count(*) from consulta where id_consulta=id_consultas);
+		if existe_consulta!=0 then
+			insert into receta values(id_recetas,id_consultas,id_paciente,id_doctor,1,descrip);
+			select 1 valido, ('Receta Creada, para poder imprimir la receta, visita la sección Mis recetas.')msj;
+		else
+			select 2 valido, ('La receta no pudo ser creada debido a un error en la consulta. Cierra la sesión y vuleve a ingresar el sistema para poder arreglar este problema.')msj;
+		end if;
+	else
+		update receta set descripcion_receta=descrip where id_receta=id_modif;
+		select 0 valido, ('Receta Modificada')msj;
+	end if;
+end$
+delimiter ;
+
+#Consulta de TODO
+delimiter $
+create procedure sp_ConsultaDoctor(in doctor int, in tipo int)
+begin
+	declare existe int(1);
+	if tipo=1 then 	#Consulta de CONSULTAS
+		set existe=(select count(*) from consulta where id_doctor=doctor);
+		#Revisamos si ya tenemos consulta registradas a nombre de este doctor
+		if existe!=0 then
+			select * from consulta where id_doctor=doctor;
+		else
+			select 0 valido, ('No has realizado ninguna Consulta') msj;
+		end if;
+	end if;
+	if tipo=2 then	#Consulta de RECETAS
+
+		set existe=(select count(*) from receta where id_doctor=doctor);
+		#Revisamos si ya tenemos recetas registradas a nombre de este doctor
+		if existe!=0 then
+			select * from receta where id_doctor=doctor;
+		else
+			select 0 valido, ('No has expedido ninguna Receta') msj;
+		end if;
+	end if;
+	if tipo=3 then	#Consulta de JUSTIFICANTES
+	set existe=(select count(*) from justificantes where id_doctor=doctor);
+		#Revisamos si ya tenemos jusntificantes registradas a nombre de este doctor
+		if existe!=0 then
+			select * from justificantes where id_doctor=doctor;
+		else
+			select 0 valido, ('No has expedido ningun Justificante') msj;
+		end if;
+	end if;
+end$
+delimiter ;
+
+#ALTA Y MODIFICACION de JUSTIFICANTE
+delimiter $
+create procedure sp_JustAM(in id_doctors int, in curps nvarchar(50), in tel nvarchar(18), in edads int, in just nvarchar(250), in accion int, in id_modif int)
+begin
+	declare id_just int;
+	declare id_pac int;
+	declare existe int;
+	declare existe_relacion int;
+	declare datec timestamp;
+	declare activo int;
+	set datec=(curtime());
+	set id_just=(select ifnull(max(id_justificante), 0)+1 from justificantes);
+	set id_pac=(select id_paciente from paciente where paciente.curp=curps);
+	set existe=(select count(*) from paciente where paciente.curp=curps);
+	if existe!=0 then
+		if accion=1 then
+			set activo=(select count(*)from paciente where paciente.curp=curps);
+			#Valido que el usuario este activo
+			if activo !=0 then
+				insert into justificantes values(id_just,id_doctors,id_pac, tel,edads,datec,just,1);
+				select 1 valido, ('Justificante Creado')msj;
+				#Haciendo el alta a la tabla paciente_doctor
+					set existe_relacion=(select count(*)from paciente_doctor where id_paciente=id_pac and id_empleado=id_doctors);
+					if existe_relacion =0 then
+						insert into paciente_doctor values(id_pac,id_doctors);
+					end if;
+			else
+				select 2 valido, ('El Justificante no pudo ser creado. El paciente fue dado de baja, para activarlo de nuevo visita la Sección Usuarios')msj;
+			end if;
+		else
+			update justificantes set id_justificante=id_just,id_doctor=id_doctors,id_paciente=id_pac,telefono=tel, edad=edads, justificacion=just where id_justificante=id_modif;
+			select 2 valido, ('Justificante Modificado')msj;
+		end if;
+	else
+		select 0 valido, ('El justificante no pudo ser creado. El curp que ingresaste no es válido.') msj;
+	end if;
+end$
+delimiter ;
+
+#Baja de Receta Docto
+delimiter $
+create procedure sp_BajaReceta(in id_recetas int, in id_doctor int)
+begin
+	update receta set estado=0 where id_receta=id_recetas;
+	select 1 valido, ('Receta Eliminada') msj;
+end$
+delimiter ;
+
+#Procedure para crear e catalogo de enfermedades
+delimiter $
+create procedure sp_Enfermedades()
+begin
+	insert into enfermedades values(0,'Sano', 'Sin enfermedad riesgosa');
+	insert into enfermedades values(1,'Accidentes y lesiones', 'Existen una gran variedad de lesiones como consecuencia de accidentes, tales como quemaduras, intoxicaciones, traumatismos, etc., constituyendo en ocasiones, importantes problemas para la salud.');
+	insert into enfermedades values(2, 'Aparato Digestivos', 'Cirrosis, hepatitis, estreñimiento.');
+	insert into enfermedades values(3, 'Aparato Respitratorio', 'Las enfermedades que afectan a la vía respiratoria, desde los procesos de vías altas hasta los más graves por afectar al árbol bronquial y los pulmones, suponen una gran parte de las consultas médicas...');
+	insert into enfermedades values(4,'Cardiovasculares','Las enfermedades cardiovasculares son las que pueden afectar a nuestro corazón y al sistema circulatorio: venas, arterias, etc.');
+	insert into enfermedades values(5,'Dematologia','La Piel es nuestro órgano más grande, nos protege contra la luz, el sol el frío, por ello debemos protegerla.');
+	insert into enfermedades values(6,'Endocrinologia y Nutricion','Enfermedades habitualmente englobadas en trastornos de hormonas o del metabolismo se exponen en este capítulo para avanzar en el conocimiento de sus síntomas más frecuentes, los procedimientos diagnósticos y terapéuticos habituales y los consejos de prevención que pueden evitar el desarrollo de este tipo de patologías');
+	insert into enfermedades values(7,'ETSs','Las enfermedades de transmisión sexual son infecciones que se adquieren por tener relaciones sexuales con alguien que esté infectado. Pueden afectar tanto a hombres como a mujeres.');
+	insert into enfermedades values(8,'Enfermedades Infecciones','Nuestro organismo tiene mecanismos de defensa (sistema inmunológico) para defenderse de agentes como bacterias, virus, hongos. A veces éstos encuentran en el organismo condiciones favorables, y provocan enfermedades infecciosas.');
+	insert into enfermedades values(9,'Ematologia','Muchas son las funciones que tiene la sangre, y muchas las alteraciones que puede sufrir, como alteraciones de los glóbulos rojos (anemias), glóbulos blancos y plaquetas. La hematología además, también abarca enfermedades oncológicas (linfomas, mielomas, leucemias...)');
+	insert into enfermedades values(10,'Huesos, articulaciones y musculos','Patologías como la osteoporosis, las artritis, la espondilitis anquilopoyética, etc merecen un espacio donde se describan sus síntomas, las pruebas diagnósticas más habituales y las opciones de tratamiento más actuales y eficaces para cada paciente.');
+	insert into enfermedades values(11,'Oftalmologia','Es la especialidad que estudia las enfermedades oculares y sus tratamientos');
+	insert into enfermedades values(12,'Otorrinolaringologia','Es la especialidad de la garganta, nariz y odio que trata enfermedades tan comunes como la otitis, hasta los cánceres de cuello y laringe');
+	insert into enfermedades values(13,'Psiquiatria','Depresión, manía, esquizofrenia... son términos que utilizamos todos los día para referirnos a las alteraciones anímicas y de comportamiento. A continuación se exponen conceptos de interés sobre estas y otras enfermedades que afectan a la salud mental.');
+	insert into enfermedades values(14,'Sistema Nervioso','Patologías como parkinson, hemorragia intracraneal, trastornos del sueño, accidente cerebrovascular, etc..');
+	insert into enfermedades values(15,'Urologia','La insuficiencia renal aguda es un deterioro brusco del funcionamiento del riñón. Dicha alteración provoca que la capacidad de filtrado de la sangre se vea alterada y que, consecuentemente, en la sangre se acumulen sustancias nitrogenadas,');
+	insert into enfermedades values(16,'Cancer','Los tratamientos para esta enfermedad varían de acuerdo con el tipo de cáncer y con su estadio.');
+	insert into enfermedades values(17,'Enfermedades Raras','Las enfermedades raras son aquellas que afectan a menos de 5 personas por cada 10.000 habitantes.');
+end $
+delimiter ;
+
+#Procedure para mostrar los datos necesarios al crear una receta o jsutificante
+delimiter $
+	create procedure sp_DatosAuxiliares(id_pacientes int, id_doctors int,id_consultas int)
+begin
+		#declaracion de valores
+		#PACIENTE
+			declare nombre_p nvarchar(50);
+			declare paterno_p nvarchar(50);
+			declare materno_p nvarchar(50);
+			declare nacimientos nvarchar(50);
+			declare sexos int;
+		#DOCTOR
+			declare nombre_d nvarchar(50);
+			declare paterno_d nvarchar(50);
+			declare materno_d nvarchar(50);
+			declare grados nvarchar(100);
+			declare institucions nvarchar(100);
+			declare cedulas nvarchar(120);
+			declare especialidads nvarchar(100);
+		#CONSULTA
+			declare tipo_enfermedad int;
+			declare enfermedads nvarchar(30);
+			declare fechas timestamp;
+			declare tipo_consulta int;
+			declare edads int;
+			declare pesos int;
+			declare estaturas int;
+			declare descripcions nvarchar(300);
+		#Añadiendo valores
+			declare id_eventos int;
+			set id_eventos=(select id_evento from consulta where id_consulta=id_consultas);
+			#nombre del paciente
+			set nombre_p=(select nombre from usuario where id_usuario=id_pacientes);
+			#apellido paterno del paciente
+			set paterno_p=(select apellido_p from usuario where id_usuario=id_pacientes);
+			#apellido amterno del paciente
+			set materno_p=(select apellido_m from usuario where id_usuario=id_pacientes);
+			#nombre del doctor
+			set nombre_d=(select nombre from usuario where id_usuario=id_doctors);
+			#apellido paterno del paciente
+			set paterno_d=(select apellido_p from usuario where id_usuario=id_doctors);
+			#apellido amterno del paciente
+			set materno_d=(select apellido_m from usuario where id_usuario=id_doctors);
+			
+			set sexos=(select sexo from usuario, paciente where id_paciente=id_pacientes);
+			set nacimientos=(select fecha_nacimiento from usuario, paciente where id_paciente=id_pacientes);
+			set grados=(select grado_estudios from usuario, empleado where id_empleado=id_doctors);
+			set institucions=(select institucion from usuario, empleado where id_empleado=id_doctors);
+			set cedulas=(select cedula_profesional from usuario, empleado where id_empleado=id_doctors);
+			set especialidads=(select especialidad from usuario, empleado where id_empleado=id_doctors);
+			
+			set fechas=(select fecha from agenda where id_evento=id_eventos);
+			set tipo_enfermedad=(select id_enfermedad from consulta where id_consulta=id_consultas);
+			set enfermedads=(select enfermedad from enfermedades where id_enfermedad=tipo_enfermedad);
+			set tipo_consulta=(select tipo from consulta where id_consulta=id_consultas);
+			set edads=(select edad from consulta where id_consulta=id_consultas);
+			set pesos=(select peso from consulta where id_consulta=id_consultas);
+			set estaturas=(select estatura from consulta where id_consulta=id_consultas);
+			set descripcions=(select descripcion from consulta where id_consulta=id_consultas);
+			
+			select 1 valido,nombre_p nombre_paciente,paterno_p paterno_paciente, materno_p materno_paciente,
+					nombre_d nombre_doctor, paterno_d paterno_doctor, materno_d materno_doctor,sexos sexo,nacimientos fecha_nac,
+					grados grado_estudios,institucions instituto,cedulas cedula_profesional,especialidads especialidades,
+					fechas fecha_exp,enfermedads id_enf,tipo_consulta tipo_con,edads edades,pesos peso,estaturas estatura,descripcions descripcion;
+end$ 
+delimiter ;
+
+-- Procedure para la relación paciente doctor.
+delimiter $
+create procedure sp_PacienteDoctor(in relacion int, in id_usuario int)
+begin
+	#Si relacion=0 obtengo los pacientes para cada doctor
+	if relacion=0 then
+		select id_paciente from paciente_doctor where id_empleado=id_usuario;
+	end if;
+	#Si relacion=1 obtengo los doctores para cada paciente
+	if relacion=1 then
+		select id_empleado from paciente_doctor where id_paciente=id_usuario;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure vistaExpedientes(in id_paciente int)
+begin
+	declare curps nvarchar(100);
+	declare correos nvarchar(100);
+	declare nombres nvarchar(50);
+	declare paternos nvarchar(50);
+	declare maternos nvarchar(50);
+	declare sexos int;
+	declare estados int;
+	set estados=(select estado from usuario where id_usuario=id_paciente);
+	if estados=1 then
+		set curps=(select curp from paciente where paciente.id_paciente=id_paciente);
+		set nombres=(select nombre from usuario where id_usuario=id_paciente);
+		set paternos=(select apellido_p from usuario where id_usuario=id_paciente);
+		set maternos=(select apellido_m from usuario where id_usuario=id_paciente);
+		set sexos=(select sexo from paciente where paciente.id_paciente=id_paciente);
+		select 1 valido,id_paciente paciente, curps curp,nombres nombres, paternos paterno, maternos materno, sexos sexo;
+	else
+		select 0 valido;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_Nombres(in id_usuarios int)
+begin
+	declare existe int;
+	set existe=(select count(*) from usuario where id_usuario=id_usuarios);
+	if existe!=0 then
+		select nombre, apellido_p, apellido_m from usuario where id_usuario=id_usuarios;
+	else
+		select ('No') nombre, ('Existe') apellido_p, ('El Usuario') apellido_m;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_vistaConsulta(in id_pacientes int, in id_doctors int, in id_consultas int)
+begin
+	declare id_eventos int;
+	declare activo int;
+	#tabla agenda
+	declare fechas nvarchar(50);
+	#tabla consulta
+	declare tipox int;
+	#tabla consulta
+	declare enfermedads int;
+	declare tipo_enf nvarchar(50);
+	declare paciente nvarchar(200);
+	declare doctor nvarchar(200);
+	declare receta int;
+	declare existe_r int;
+	#Estaod activo de la consulta
+	set id_eventos=(select id_evento from consulta where id_consulta=id_consultas);
+	set activo=(select count(*) from agenda where id_evento=id_eventos and estado=1);
+	if activo!=0 then
+		#obteniendo valores
+		set doctor=(concat_ws(' ',(select nombre from usuario where id_usuario=id_doctors),
+						   (select apellido_p from usuario where id_usuario=id_doctors),
+						   (select apellido_m from usuario where id_usuario=id_doctors)));
+		set paciente=(concat_ws(' ',(select nombre from usuario where id_usuario=id_pacientes),
+						   (select apellido_p from usuario where id_usuario=id_pacientes),
+						   (select apellido_m from usuario where id_usuario=id_pacientes)));
+		set enfermedads=(select id_enfermedad from consulta where  id_consulta=id_consultas);
+		set tipo_enf=(select enfermedad from enfermedades where id_enfermedad=enfermedads);
+		set tipox=(select tipo from consulta where  id_consulta=id_consultas);
+		set fechas=(select fecha from agenda where id_evento=id_eventos);
+		set receta=(select count(*)from receta where id_consulta=id_consultas);
+		if receta!=0 then
+			set existe_r=1;
+		else
+			set existe_r=0;
+		end if;
+		select 1 valido, fechas fecha_exp,tipox tipos,tipo_enf enfermedad, paciente nombrep,doctor nombred, existe_r receta,id_consultas consulta;
+	else
+		select 0 valido,('La consulta fue dada de baja') msj;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_DatosPersonales(in id_usuarios int)
+begin 
+	declare existe int;
+	declare tipo int;
+		#PACIENTE
+			declare nombres nvarchar(150);
+			declare nacimientos nvarchar(50);
+			declare sexos int;
+			declare curps nvarchar(100);
+			declare correos nvarchar(100);
+		#DOCTOR
+			declare grados nvarchar(100);
+			declare institucions nvarchar(100);
+			declare cedulas nvarchar(120);
+			declare especialidads nvarchar(100);
+	set existe=(select count(*) from usuario where estado=1 and id_usuario=id_usuarios);
+	if existe!=0 then
+			set nombres=(concat_ws(' ',(select nombre from usuario where id_usuario=id_usuarios),
+									   (select apellido_p from usuario where id_usuario=id_usuarios),
+									   (select apellido_m from usuario where id_usuario=id_usuarios)));
+			set correos=(select correo from usuario where id_usuario=id_usuarios);
+		#Obteniendo el tipo de usuario que es doctor/paciente
+		set tipo=(select count(*)from empleado where id_empleado=id_usuarios);
+		if tipo!=0 then
+		#Doctor
+			set grados=(select grado_estudios from empleado where id_empleado=id_usuarios);
+			set institucions=(select institucion from empleado where id_empleado=id_usuarios);
+			set cedulas=(select cedula_profesional from empleado where id_empleado=id_usuarios);
+			set especialidads=(select especialidad from empleado where id_empleado=id_usuarios);
+			select correos correo,nombres nombre, grados grado, institucions inst, cedulas ced, especialidads esp;
+		else
+		#Paciente
+			select correos as correo,nombres as nombre, nacimientos as fecha_nac,sexos as sexo;
+		end if;
+	else
+		select 0 valido, ('El usuario ha sido dado de baja') msj;
+	end if;
+end$ 
+delimiter ;
+
+delimiter $
+create procedure sp_ConsultaDoc(in id_consultas int)
+begin 
+	declare existe int;
+	#Datos de la Consulta 
+	declare id_eventos int;
+	declare tipos int;
+	declare edads int;
+	declare pesos int;
+	declare estaturas int;
+	declare anotaciones nvarchar(300);
+	declare id_enf int;
+	declare enfermedads nvarchar(30);
+	#Datos del Evento
+	declare fechas timestamp;
+	declare estados int;
+	#Receta
+	declare receta int;
+	declare id_recetas int;
+	#Agregando los valores la consulta
+	set existe=(select count(*)from consulta where id_consulta=id_consultas);
+	if existe!=0 then
+		set tipos=(select tipo from consulta where id_consulta=id_consultas);
+		set edads=(select edad from consulta where id_consulta=id_consultas);
+		set pesos=(select peso from consulta where id_consulta=id_consultas);
+		set estaturas=(select estatura from consulta where id_consulta=id_consultas);
+		set anotaciones=(select descripcion from consulta where id_consulta=id_consultas);
+		set id_enf=(select id_enfermedad from consulta where id_consulta=id_consultas);
+		#Obteniendo valor de enfermedad en texto
+		set enfermedads=(select enfermedad from enfermedades where id_enfermedad=id_enf);
+		#Obteniendo datos del evento agendado
+		set id_eventos=(select id_evento from consulta where id_consulta=id_consultas);
+		set fechas=(select fecha from agenda where id_evento=id_eventos);
+		set estados=(select estado from agenda where id_evento=id_eventos);
+		#Obteniendo los datos de la receta
+		set receta=(select count(*) from receta where id_consulta=id_consultas);
+		if receta !=0 then
+		set id_recetas=(select id_receta from receta where id_consulta=id_consultas);
+			select tipos tipo, edads edad, pesos pes, estaturas estatura, anotaciones anotacion, enfermedads enf, fechas fec, estados est,receta receta, id_recetas id_rec,id_eventos evento;
+		else
+			select tipos tipo, edads edad, pesos pes, estaturas estatura, anotaciones anotacion, enfermedads enf, fechas fec, estados est,receta receta, id_eventos evento;
+		end if;
+	else 
+	select ('Inicia sesión de nuevo') msj;
+end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_RecetaDoc(in id_recetas int)
+begin
+	declare existe int;
+	set existe=(select count(*) from receta where id_receta=id_recetas);
+	if existe!=0 then
+	select * from receta where id_receta=id_recetas;
+	else
+	select 0 valido, ('La receta fue dada de baja')msj;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_JustificanteDoc(in id_justificantes int)
+begin
+	declare existe int;
+	set existe=(select count(*) from justificantes where id_justificante=id_justificantes);
+	if existe!=0 then
+	select * from justificantes where id_justificante=id_justificantes;
+	else
+	select 0 valido, ('El justificante fue dado de baja')msj;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_bajaConsulta(in id_even int)
+begin
+	declare correcto int;
+	set correcto=(select count(*) from agenda where id_evento=id_even);
+	if correcto!=0 then
+		update agenda set estado=0 where id_evento=id_even;
+		select 1 valido, ('La consulta y receta correspondientes has sido eliminadas con éxito.') msj;
+	else
+		select 0 valido, ('El Evento ya fue dado de baja.') msj;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure sp_bajaJustificante(in id_just int)
+begin
+	declare correcto int;
+	set correcto=(select count(*) from justificantes where id_justificante=id_just);
+	if correcto!=0 then
+		update justificantes set estado=0 where id_justificante=id_just;
+		select 1 valido, ('El justificante ha sido eliminado con éxito.') msj;
+	else
+		select 0 valido, ('El Justificante ya habia sido eliminado') msj;
+	end if;
+end$
+delimiter ;
+
+
+delimiter $
+create procedure contraseña(in email nvarchar(100), in accion int, in contra nvarchar(100))
+begin
+	declare existe int;
+	declare activo int;
+#Si la accion es 0  se hace una consulta
+	if accion=0 then
+		set existe=(select count(*) from usuario where correo=email);
+		if existe !=0 then
+			set  activo=(select count(*) from usuario where correo=email and estado=1);
+			if activo !=0 then
+				select 1 valido, ('El correo ingresado es válido.') ms;
+			else
+				select 0 valido, ('El usuario ha sido dado de baja.')msj;
+			end if;
+		else
+			select 2 valido, ('El correo ingresado no esta registrado') msj;
+		end if;
+	else
+#Si la accion=1 se hace un cambio de la contraseña
+	update usuario set contraseña=contra where correo=email;
+	select 3 valido, ('La contraseña ha sido modificada con éxito.')msj;
+	end if;
+end$
+delimiter ;
+
+#Procedure para guardar una direccion
+delimiter $
+create procedure sp_AltaDireccion(in id_usuario int, in direccion nvarchar(200), in tipo nvarchar(50))
+begin
+	declare id int;
+    set id=(select ifnull(max(id_direccion), 0)+1 from direcciones);
+    insert into direcciones values(id, id_usuario, direccion, tipo);
+	select 1 valido, ('Direccion Registrada con exito') msj;
+end $
+delimiter ;
+
+#Procedure para consultar una direccion
+delimiter $
+create procedure sp_ConsultaDireccion(in id_usuario int)
+begin
+	declare val int;
+    declare val2 int;
+    select count(*) into val from usuario where usuario.id_usuario=id_usuario;
+    if val=1 then 
+		select count(*) into val2 from direcciones where direcciones.id_usuario=id_usuario;
+		if val2 !=0 then
+			select * from direcciones where direcciones.id_usuario=id_usuario;
+		else
+			select ('Sin direcciones aun :/') direccion;
+		end if;
+	else
+		select 0 direccion;
+	end if;
+end $
+delimiter ;
+
+#Procedure para modificar una direccion
+delimiter $
+create procedure sp_CambiarDireccion(in id_direccion int, direccion nvarchar(200), tipo nvarchar(50))
+begin
+	declare val int;
+    select count(*) into val from direcciones where direcciones.id_direccion=id_direccion;
+    if val=1 then
+		update direcciones set direcciones.direccion=direccion, direcciones.tipo=tipo where direcciones.id_direccion=id_direccion;
+        select 1 valido, ('Direccion modificada exitosamente') msj;
+	else
+		select 0 valido, ('Direccion no existe') msj;
+    end if;
+end $
+delimiter ;
+
+#Procedure para eliminar una direccion
+delimiter $
+create procedure sp_EliminarDireccion(in id_direccion int)
+begin
+	declare val int;
+	select count(*) into val from direcciones where direcciones.id_direccion=id_direccion;
+    if val=1 then
+		delete from direcciones where direcciones.id_direccion=id_direccion;
+        select 1 valido, ('Direccion eliminada exitosamente') msj;
+	else
+		select 0 valido, ('Direccion no existe :/') msj;
+	end if;
+end $
+delimiter ;
+
+#Procedure para guardar un telefono
+delimiter $
+create procedure sp_AltaTelefono(in id_usuario int, in telefono nvarchar(30), in tipo nvarchar(50))
+begin
+	declare id int;
+    set id=(select ifnull(max(id_telefono), 0)+1 from telefonos);
+    insert into direcciones values(id, id_usuario, telefono, tipo);
+	select 1 valido, ('Telefono Registrado con exito') msj;
+end $
+delimiter ;
+
+#Procedure para consultar un telefono
+delimiter $
+create procedure sp_ConsultaTelefono(in id_usuario int)
+begin
+	declare val int;
+    declare val2 int;
+    select count(*) into val from usuario where usuario.id_usuario=id_usuario;
+    if val=1 then 
+		select count(*) into val2 from telefonos where telefonos.id_usuario=id_usuario;
+		if val2 !=0 then
+			select * from telefonos where telefonos.id_usuario=id_usuario;
+		else
+			select ('Sin telefonos aun :/') telefono;
+		end if;
+	else
+		select 0 telefono;
+	end if;
+end $
+delimiter ;
+
+#Procedure para modificar un telefono
+delimiter $
+create procedure sp_CambiarTelefono(in id_telefono int, telefono nvarchar(200), tipo nvarchar(50))
+begin
+	declare val int;
+    select count(*) into val from telefono where telefonos.id_telefono=id_telefono;
+    if val=1 then
+		update telefonos set telefonos.telefono=telefono, telefonos.tipo=tipo where telefonos.id_telefono=id_telefono;
+        select 1 valido, ('Telefono modificado exitosamente') msj;
+	else
+		select 0 valido, ('Telefono no existe') msj;
+    end if;
+end $
+delimiter ;
+
+#Procedure para eliminar un telefono
+delimiter $
+create procedure sp_EliminarTelefono(in id_telefono int)
+begin
+	declare val int;
+	select count(*) into val from telefonos where telefonos.id_telefono=id_telefono;
+    if val=1 then
+		delete from telefonos where telefonos.id_telefono=id_telefono;
+        select 1 valido, ('Telefono eliminado exitosamente') msj;
+	else
+		select 0 valido, ('Telefono no existe :/') msj;
+	end if;
+end $
+delimiter ;
+
+delimiter $
+create procedure llenar_parentescos()
+begin
+	insert into parentescos values(0,'PADRE');
+	insert into parentescos values(1,'MADRE');
+	insert into parentescos values(2,'HIJO');
+	insert into parentescos values(3,'PAREJA');
+	insert into parentescos values(4,'OTRO');
+	insert into parentescos values(5,'TITULAR DEL CORREO');
+end $
+delimiter ;
+
+delimiter $
+create procedure sp_obtenerparentescos(in correos nvarchar(100))
+begin
+	declare nombre nvarchar(100);
+	declare existe int;
+	set existe=(select count(*)from paciente_correo where correo=correos);
+	if existe!=0 then
+		select id_paciente, id_parentesco from paciente_correo where correo=correos;
+	else
+		select 0 valido, ('El usuario ingresado no tiene parentescos')  msj;
+	end if;
+end$
+delimiter ; 
+
+delimiter $
+create procedure sp_borrarparentescos(in correos nvarchar(100),in nuevo nvarchar(100), in contra nvarchar(50),in usuario int)
+begin
+	declare existe int;
+	declare user int;
+	declare validacion int;
+	set existe=(select count(*)from paciente_correo where correo=correos);
+	if existe!=0 then
+		set user=(select count(*)from paciente_correo where id_paciente=usuario);
+		if user!=0 then
+			set validacion=(select  STRCMP(correos, nuevo));
+			if validacion !=0 then
+				delete from paciente_correo where id_paciente=usuario and correo=correos;
+				update usuario set correo=nuevo, contraseña=contra where id_usuario=usuario;
+				select 1 valido, ('El paciente seleccionado tiene su correo individual ahora.') msj;
+			else
+				select 0 valido, ('El correo electrónico debe ser distinto al usado actualmente para desvincular las cuentas.')  msj;
+			end if;
+		else
+			select 0 valido, ('Usuario Invalido')  msj;
+		end if;
+	else
+		select 0 valido, ('Correo invalido')  msj;
+	end if;
+end$
+delimiter ;
+
+delimiter $
+create procedure existecorreo(in correos nvarchar(100))
+begin
+	declare existe int;
+	declare contra nvarchar(100);
+	set existe=(select count(correo) from usuario where correo=correos);
+	if existe=0 then
+		select 1 valido,('El correo esta disponible') msj;
+	else
+		set contra=(select contraseña from usuario where correo=correos limit 1);
+		select 0 valido, ('El correo ingresado ya esta ocupado, para continuar deberá indicar una relación familiar!') msj, contra contraseña;
+	end if;
+end $
+delimiter ; 
+
+delimiter $
+create procedure sp_obtenercorreos(in email nvarchar(100))
+begin
+	select id_usuario from usuario where correo=email;
+end $
+delimiter ;
+
+delimiter $
+create procedure sp_vincularcorreos(in email nvarchar(100),in id int, in id_relacion int)
+begin
+	#VALIDACIÓN para ver que no exista la misma relación ya en la tabla
+	declare existe int;
+	set existe=(select count(*) from paciente_correo where correo=email and id_paciente=id);
+	if existe!=0 then
+		select 0 valido, ('La relación ya existe')msj;
+	else
+		update usuario set correo=email where id_usuario=id;
+		insert into paciente_correo values(id,email,id_relacion,0); 
+		select 1 valido,('Vinculación realizada con éxito');
+	end if;
+end $
+delimiter ;
+
+delimiter $
+create procedure sp_familia(in email nvarchar(100))
+begin
+	select * from paciente_correo where correo=email;
+end $
+delimiter ;
+
+delimiter $ 
+create procedure sp_aceptarSolicitud(in email nvarchar(100), in id int)
+begin
+	declare existe int;
+	set existe=(select count(*) from paciente_correo where correo=email and id_paciente=id);
+	if existe!=0 then
+		update paciente_correo set solicitud=1 where correo=email and id_paciente=id;
+		select 1 valido,('Has aceptado la solicitud, para guardar el cambio Inicia Sesión de nuevo.');
+	else
+		select 0 valido, ('La solicitud fue cancelada!')msj;
+	end if;
+end $
+delimiter ;
+
+delimiter $ 
+create procedure sp_rechazarSolicitud(in email nvarchar(100), in id int)
+begin
+	declare existe int;
+	set existe=(select count(*) from paciente_correo where correo=email and id_paciente=id);
+	if existe!=0 then
+		delete from paciente_correo where id_paciente=id and correo=email;
+		update usuario set correo='No registrado',contraseña='Sin Contraseña' where id_usuario=id;
+		select 1 valido,('Has rechazado la solicitud, para guardar el cambio Inicia Sesión de nuevo.')msj;
+	else
+		select 0 valido, ('La solicitud fue cancelada!')msj;
+	end if;
+end $
+delimiter ;
+
+DELIMITER $
+create procedure sp_DatosPersonalesPaciente(in id_usuarios int)
+begin 
+	declare existe int;
+	declare tipo int;
+		#PACIENTE
+			declare nombres nvarchar(150);
+			declare nacimientos nvarchar(50);
+			declare sexos int;
+			declare curps nvarchar(100);
+			declare correos nvarchar(100);
+            declare sangre nvarchar(10);
+
+	set existe=(select count(*) from usuario where estado=1 and id_usuario=id_usuarios);
+	if existe!=0 then
+			set nombres=(concat_ws(' ',(select nombre from usuario where id_usuario=id_usuarios),
+									   (select apellido_p from usuario where id_usuario=id_usuarios),
+									   (select apellido_m from usuario where id_usuario=id_usuarios)));
+			set correos=(select correo from usuario where id_usuario=id_usuarios);
+            set nacimientos=(select fecha_nacimiento from paciente where id_paciente=id_usuarios);
+            set sexos=(select sexo from paciente where id_paciente=id_usuarios);
+            set curps=(select curp from paciente where id_paciente=id_usuarios);
+            set sangre=(select tipo_sangre from paciente where id_paciente=id_usuarios);
+
+			select curps as curp, correos as correo,nombres as nombre, nacimientos as fecha_nac,sexos as sexo, sangre as tipo_sangre;
+	else
+		select 0 valido, ('El usuario ha sido dado de baja') msj;
+	end if;
+end$ 
+delimiter ;
+
+delimiter $
+create procedure sp_ObtenerRecetas(in id_paciente int)
+begin
+	declare existe int;
+	select count(*) into existe from recetas where recetas.id_paciente=id_paciente and recetas.estado=1;
+	if existe!=0 then
+		select * from recetas where recetas.id_paciente=id_paciente and recetas.estado=1;
+	else
+		select 0 id_receta;
+	end if;
+end $
+delimiter ;

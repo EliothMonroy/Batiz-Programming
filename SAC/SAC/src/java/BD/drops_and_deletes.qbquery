@@ -1,0 +1,37 @@
+use saclife;
+-- drop's tables
+drop table usuario;
+drop table empleado;
+drop table agenda;
+drop table paciente;
+drop table consulta;
+drop table receta;
+drop table justificantes;
+drop table direcciones;
+drop table telefonos;
+drop table chat;
+drop table cambios;
+drop table emergencia;
+drop table cliente;
+drop table paciente;
+
+-- drops procedures
+drop procedure sp_AltaCliente;
+drop procedure sp_Enfermedades;
+drop procedure sp_AltaUsuario;
+drop procedure sp_login;
+drop procedure sp_ConsultaUsuario;
+drop procedure sp_AltaEmpleado;
+drop procedure sp_AltaPaciente;
+
+-- deletes
+delete from usuario;
+delete from cliente;
+delete from enfermedades;
+delete from empleado;
+
+-- drop database
+drop database saclife;
+
+-- DIRECTOS
+delete from usuario where usuario.id_usuario=4;

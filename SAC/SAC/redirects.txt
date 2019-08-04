@@ -1,0 +1,9 @@
+redirect=0 error inesperado
+redirect=1 login usuario
+redirect=2 alta usuario exitosa
+redirect=3 alta usuario no exitosa
+redirect=4 baja usuario exitosa
+redirect=5 baja usuario no encontrado
+redirect=6 cambio usuario exitosa
+redirect=7 cambio usuario no encontrado no exitoso 
+redirect=8 consulta de usuario no encontrado

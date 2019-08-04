@@ -1,0 +1,16 @@
+drop procedure sp_AltaUsuario;
+drop table usuario;
+drop table empleado;
+drop table agenda;
+drop table paciente;
+drop table consulta;
+drop table receta;
+drop table justificantes;
+drop table direcciones;
+drop table telefonos;
+drop table chat;
+drop table cambios;
+drop table emergencia;
+delete from enfermedades;
+drop procedure sp_Enfermedades;
+drop database saclife;

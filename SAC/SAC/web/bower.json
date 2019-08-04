@@ -1,0 +1,30 @@
+{
+  "name": "SAC",
+  "version": "0.0.0",
+  "homepage": "https://github.com/EliothMonroy/SAC",
+  "authors": [
+    "EliothMonroy <eliothmonroy@yahoo.com.mx>"
+  ],
+  "description": "Sistema de administración de Clinicas",
+  "keywords": [
+    "SAC",
+    "HEALTH"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "normalize.css": "~3.0.3",
+    "jquery": "~2.1.4",
+    "sweetalert": "~1.0.1",
+    "foundation": "~5.5.2",
+    "bootstrap-tour": "~0.10.2",
+    "SlidesJS": "~3.0.4"
+  }
+}

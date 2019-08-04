@@ -1,0 +1,154 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : 12/06/2015, 04:00:58 PM
+    Author     : LifeSoft
+*/
+.ocultar{
+    display:none;
+    visibility: hidden;
+}
+.no-ocultar{
+    display: inline;
+}
+.body{
+	padding: 0px;
+	margin: 0px;
+	min-height: 700px;
+}
+.slides{
+	text-decoration: none;
+	max-height: 500px;
+	margin: 0 auto;
+	margin-bottom: 18px;
+	position: relative;
+}
+
+.slidesjs-navigation{
+	display: none;
+}
+.slidesjs-stop{
+	color: white;
+}
+.slidesjs-pagination{
+	display: none;
+}
+.footer{
+	font-family: Century Gothic, sans-serif;
+	background-color: black;
+	margin: 0px;
+	overflow: hidden;
+	padding: 16px;
+	margin-top: 20px;
+	box-shadow: 0px -2px 0px #3E4037;
+}
+.please{
+	background: url(images/usuarios2.jpg) no-repeat center center;
+	-webkit-background-size:cover;
+	-moz-background-size:cover;
+	-o-background-size:cover;
+	background-size:cover;
+	padding: 100px;
+}
+.desc{
+	text-align: left;
+	color: gray;
+	margin: 10px;
+	padding: 50px;
+}
+.boto{
+	display: block;
+	margin: auto;
+	margin-bottom: 50px;
+	width: 30%;
+	border:3px solid  #0D4884;
+	background-color: #0D4884;
+	padding:15px 30px 15px 30px;
+	border-radius: 5px;
+}
+.up div{
+	margin: 15px;
+	text-decoration: center;
+}
+a button {
+	text-decoration: none;
+	color: white;
+	text-transform: uppercase;
+
+}
+.footer p{
+	margin: 0px;
+	color: white;
+}
+.footer section{
+	width: 50%;
+	float: left;
+	background-color: black;
+}
+.footer ol{
+	list-style-type: none;
+}
+.footer li a{
+	color: white;
+	text-transform: uppercase;
+	font-weight: 900;
+	text-decoration: none;
+	letter-spacing: 3px;
+	padding: 0px;
+	margin-top: 8px;
+	transition:color .5s;
+}
+.footer li a:hover{
+	color: #008CBA;
+}
+section p{
+	text-align: center;
+}
+section .name{
+	margin-bottom: 10px
+}
+.benefits{
+	min-width: 70%;
+}
+.redes{
+	max-width: 30%;
+}
+.item{
+	display: inline-block;
+	margin-left: 18px;
+	text-align: center;
+}
+.item span{
+	margin-bottom: 15px;
+	color: white;
+	font-size: 14px;
+	display: block;
+}
+.item:hover{
+	color: #3E4037;
+}
+.header{
+	position: relative;
+	overflow: hidden;
+	padding: 10px;
+	background-color:black;
+	border-bottom: 1px solid #3E4037;
+	box-shadow: 0px 1.5px 0px #3E4037;
+}
+.header p{
+	color: white;
+	margin: 15px;
+}
+.up p{
+	margin: 0px;
+}
+h2{
+	text-align: center;
+	font-weight: 200;
+	color: gray;
+	text-transform: uppercase;
+
+}
